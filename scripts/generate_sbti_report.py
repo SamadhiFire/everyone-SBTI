@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
 import html
 import json
+import mimetypes
 import re
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,8 @@ from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_PATH = BASE_DIR / "assets" / "sbti-data.json"
+ORIGINAL_MIRROR_DIR = BASE_DIR / "SBTI-test-main"
+ORIGINAL_INDEX_PATH = ORIGINAL_MIRROR_DIR / "index.html"
 OUTPUT_STEM = "sbti-report"
 IGNORED_AUTO_DIRS = {
     ".git",
@@ -937,6 +941,724 @@ def render_report_html(payload: dict[str, Any]) -> str:
     }}
     document.getElementById('exportBtn').addEventListener('click', exportLongImage);
   </script>
+</body>
+</html>
+"""
+
+
+def short_dimension_name(label: str) -> str:
+    parts = label.split(" ", 1)
+    return parts[1] if len(parts) == 2 else label
+
+
+def build_interpretation(payload: dict[str, Any]) -> str:
+    result = payload["result"]
+    top_matches = payload["scores"]["top_matches"]
+    dimension_details = payload["dimension_details"]
+
+    highlights = [
+        short_dimension_name(item["name"])
+        for item in sorted(dimension_details, key=lambda item: item["confidence"], reverse=True)[:3]
+    ]
+    highlight_text = "、".join(highlights) if highlights else "十五维画像"
+    sentences = [
+        f"从当前画像来看，你在 {highlight_text} 上的倾向更突出，整体更接近 {result['type']}（{result['cn']}）这一类人物。",
+        f"{result['description']}{result['sub']}",
+    ]
+    alternates = [f"{item['code']}（{item['cn']}）" for item in top_matches[1:3]]
+    if alternates:
+        sentences.append(f"另外，你和 {'、'.join(alternates)} 也有一定相似度，但主结果仍然以 {result['type']} 为先。")
+    sentences.append("把它当作一张娱乐向的人格切片来看会更合适，不必把自己锁死在单一标签里。")
+    return "".join(sentences)
+
+
+def load_original_type_image_map() -> dict[str, Path]:
+    if not ORIGINAL_INDEX_PATH.exists():
+        return {}
+
+    text = ORIGINAL_INDEX_PATH.read_text(encoding="utf-8", errors="ignore")
+    match = re.search(r"const TYPE_IMAGES = \{(.*?)\};", text, re.DOTALL)
+    if not match:
+        return {}
+
+    mapping: dict[str, Path] = {}
+    for code, relative_path in re.findall(r'"([^"]+)":\s*"([^"]+)"', match.group(1)):
+        cleaned = relative_path.replace("./", "", 1)
+        mapping[code] = ORIGINAL_MIRROR_DIR / cleaned
+    return mapping
+
+
+def image_path_to_data_uri(path: Path) -> str:
+    mime_type, _ = mimetypes.guess_type(path.name)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+    payload = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{payload}"
+
+
+def resolve_official_type_image(type_code: str) -> tuple[str | None, str | None]:
+    image_map = load_original_type_image_map()
+    if not image_map:
+        return None, f"未找到原版映射文件：{ORIGINAL_INDEX_PATH}"
+
+    image_path = image_map.get(type_code)
+    if not image_path:
+        return None, f"原版 index.html 里没有 {type_code} 的图片映射。"
+    if not image_path.exists():
+        return None, f"原版映射指向 {image_path.name}，但本地文件不存在。"
+
+    return image_path_to_data_uri(image_path), None
+
+
+def build_fake_qr(seed: str) -> str:
+    size = 21
+    seed_total = sum((index + 1) * ord(char) for index, char in enumerate(seed))
+    cells: list[str] = []
+
+    def in_finder(x: int, y: int) -> bool:
+        return ((0 <= x <= 6 and 0 <= y <= 6) or (14 <= x <= 20 and 0 <= y <= 6) or (0 <= x <= 6 and 14 <= y <= 20))
+
+    def finder_value(x: int, y: int) -> bool:
+        local_x = x if x <= 6 else x - 14
+        local_y = y if y <= 6 else y - 14
+        return local_x in {0, 6} or local_y in {0, 6} or (2 <= local_x <= 4 and 2 <= local_y <= 4)
+
+    for y in range(size):
+        for x in range(size):
+            if in_finder(x, y):
+                dark = finder_value(x, y)
+            else:
+                value = seed_total + x * 17 + y * 23 + x * y * 3 + (x + y) * 5
+                dark = value % 7 in {0, 1, 3}
+            cells.append(f'<span class="qr-cell{" is-dark" if dark else ""}"></span>')
+    return "".join(cells)
+
+
+def build_poster_scene(result: dict[str, Any]) -> str:
+    code = result["type"]
+    accent = "#6c8d71"
+    ink = "#37413a"
+    soft = "#eef4ee"
+    warm = "#ead9cb"
+    kind = "badge"
+
+    if code == "DEAD":
+        accent = "#6aa05e"
+        ink = "#2d3036"
+        soft = "#eef4ee"
+        warm = "#f2e3d3"
+        kind = "coffin"
+    elif code == "MUM":
+        accent = "#6f8f68"
+        ink = "#5d685f"
+        soft = "#eef4ea"
+        warm = "#efddd0"
+        kind = "heart"
+
+    if kind == "coffin":
+        return f"""
+        <svg class="poster-scene-svg" viewBox="0 0 300 220" aria-hidden="true">
+          <ellipse cx="148" cy="198" rx="86" ry="12" fill="#dbe5db" />
+          <path d="M76 64 L150 52 L224 64 L224 124 L150 136 L76 124 Z" fill="{ink}" opacity="0.88" />
+          <path d="M86 68 L150 58 L214 68 L214 114 L150 124 L86 114 Z" fill="#45484f" />
+          <path d="M64 126 L150 118 L236 126 L212 184 L88 184 Z" fill="#2f3238" />
+          <path d="M78 134 L150 128 L222 134 L204 174 L96 174 Z" fill="#3b4048" />
+          <path d="M94 102 L124 76 L170 116 L148 156 L104 150 Z" fill="#76797f" />
+          <path d="M116 86 L142 74 L178 104 L142 114 Z" fill="{warm}" />
+          <path d="M140 114 L204 120 L190 168 L144 162 Z" fill="#81c0eb" />
+          <path d="M142 114 L110 114 L100 160 L142 162 Z" fill="#d7ecfb" />
+          <circle cx="126" cy="98" r="3" fill="{ink}" />
+          <path d="M132 106 C128 110, 118 110, 114 104" stroke="{ink}" stroke-width="3" fill="none" stroke-linecap="round" />
+          <rect x="103" y="165" width="18" height="8" rx="4" fill="#d8dde0" />
+          <rect x="145" y="165" width="18" height="8" rx="4" fill="#d8dde0" />
+          <rect x="186" y="165" width="18" height="8" rx="4" fill="#d8dde0" />
+          <rect x="117" y="171" width="4" height="10" rx="2" fill="#c6ced0" />
+          <rect x="159" y="171" width="4" height="10" rx="2" fill="#c6ced0" />
+          <rect x="200" y="171" width="4" height="10" rx="2" fill="#c6ced0" />
+        </svg>
+        """
+
+    if kind == "heart":
+        return f"""
+        <svg class="poster-scene-svg" viewBox="0 0 300 220" aria-hidden="true">
+          <ellipse cx="150" cy="198" rx="84" ry="12" fill="#dbe5db" />
+          <circle cx="150" cy="108" r="68" fill="{soft}" />
+          <path d="M150 158 C120 138, 98 122, 98 92 C98 74, 112 60, 130 60 C142 60, 151 67, 157 77 C163 67, 172 60, 184 60 C202 60, 216 74, 216 92 C216 122, 193 138, 150 158 Z" fill="#efb9b1" />
+          <path d="M100 150 C92 120, 98 92, 118 82 C122 108, 132 128, 150 140 C132 150, 114 154, 100 150 Z" fill="{accent}" opacity="0.9" />
+          <path d="M200 150 C208 120, 202 92, 182 82 C178 108, 168 128, 150 140 C168 150, 186 154, 200 150 Z" fill="{accent}" opacity="0.9" />
+          <circle cx="135" cy="104" r="6" fill="#ffffff" opacity="0.7" />
+          <circle cx="165" cy="104" r="6" fill="#ffffff" opacity="0.7" />
+          <path d="M132 126 C140 134, 160 134, 168 126" stroke="#ffffff" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.9" />
+          <path d="M72 180 C104 160, 122 158, 150 166 C178 158, 196 160, 228 180" stroke="{ink}" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.22" />
+        </svg>
+        """
+
+    return f"""
+    <svg class="poster-scene-svg" viewBox="0 0 300 220" aria-hidden="true">
+      <ellipse cx="150" cy="198" rx="84" ry="12" fill="#dbe5db" />
+      <circle cx="150" cy="104" r="68" fill="{soft}" />
+      <circle cx="150" cy="104" r="46" fill="#ffffff" />
+      <path d="M150 58 L163 89 L197 91 L171 112 L180 145 L150 127 L120 145 L129 112 L103 91 L137 89 Z" fill="{accent}" />
+      <circle cx="150" cy="104" r="18" fill="#ffffff" />
+      <path d="M92 174 C112 150, 128 144, 150 144 C172 144, 188 150, 208 174" stroke="{ink}" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.16" />
+      <rect x="108" y="156" width="84" height="12" rx="6" fill="{warm}" opacity="0.78" />
+    </svg>
+    """
+
+
+def render_mirror_styles() -> str:
+    return """
+    :root {
+      --page-bg: #f3faf5;
+      --panel: #ffffff;
+      --panel-soft: #fbfdfb;
+      --text: #1f2a22;
+      --muted: #647468;
+      --line: #d8e6d9;
+      --soft: #eef5ee;
+      --accent: #6d8f72;
+      --accent-strong: #547257;
+      --shadow: 0 20px 48px rgba(69, 101, 74, 0.10);
+      --panel-radius: 20px;
+      --frame-radius: 28px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(235, 246, 238, 0.95) 0, rgba(243, 250, 245, 0.95) 30%, rgba(243, 248, 244, 0.88) 60%, #eef6f1 100%);
+      color: var(--text);
+    }
+    button { font: inherit; }
+    .page-shell {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 28px 16px 56px;
+    }
+    .report-frame {
+      position: relative;
+      max-width: 950px;
+      margin: 0 auto;
+      padding: 68px 22px 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--frame-radius);
+      background: linear-gradient(180deg, #ffffff, #fbfdfb);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .report-frame::after {
+      content: "";
+      position: absolute;
+      top: -34px;
+      right: -28px;
+      width: 146px;
+      height: 146px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(173, 195, 171, 0.28), rgba(173, 195, 171, 0.08) 58%, rgba(173, 195, 171, 0) 70%);
+      pointer-events: none;
+    }
+    .toolbar {
+      position: absolute;
+      top: 26px;
+      right: 26px;
+      z-index: 2;
+    }
+    .export-btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 20px;
+      background: #5c775d;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 14px 30px rgba(83, 109, 85, 0.22);
+      cursor: pointer;
+    }
+    .export-btn:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+    .panel {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: var(--panel-radius);
+      background: linear-gradient(180deg, #ffffff, var(--panel-soft));
+      padding: 18px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.12fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .hero-poster-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 22px;
+      gap: 16px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+    }
+    .hero-poster {
+      min-height: 390px;
+      border: 1px solid var(--line);
+      border-radius: var(--panel-radius);
+      background: linear-gradient(180deg, #ffffff, #f8fbf8);
+      padding: 16px;
+    }
+    .poster-window {
+      position: relative;
+      height: 100%;
+      min-height: 356px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 100% 100%, rgba(222, 236, 223, 0.62), rgba(255, 255, 255, 0) 28%),
+        radial-gradient(circle at 10% 0%, rgba(233, 237, 233, 0.74), rgba(255, 255, 255, 0) 24%),
+        linear-gradient(180deg, #ffffff, #f7faf8);
+      padding: 18px 16px 14px;
+      overflow: hidden;
+    }
+    .poster-window::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 34px;
+      background: linear-gradient(180deg, rgba(132, 137, 138, 0.52), rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+    .poster-kicker,
+    .poster-cn,
+    .poster-code {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+    .poster-kicker {
+      color: #484f4b;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-top: 4px;
+    }
+    .poster-cn {
+      margin-top: 10px;
+      font-size: 42px;
+      line-height: 1.06;
+      font-weight: 800;
+      color: #222a25;
+    }
+    .poster-code {
+      margin-top: 6px;
+      color: #6da05f;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .poster-scene {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 190px;
+      margin-top: 8px;
+      padding-bottom: 40px;
+    }
+    .poster-image {
+      width: 100%;
+      max-width: 298px;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+    .poster-image-missing {
+      width: 100%;
+      max-width: 280px;
+      min-height: 176px;
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: rgba(238, 245, 238, 0.68);
+      color: #53665a;
+      font-size: 13px;
+      line-height: 1.8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: left;
+      padding: 14px 16px;
+    }
+    .poster-quote {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 18px;
+      color: #54665a;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .poster-side-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #75837a;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      user-select: none;
+    }
+    .summary-card {
+      min-height: 390px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 18px 18px 20px;
+    }
+    .summary-kicker {
+      color: var(--accent-strong);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .summary-title {
+      font-size: clamp(34px, 6vw, 56px);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      font-weight: 500;
+      color: #1b2520;
+    }
+    .summary-badge {
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #eef6ee;
+      border: 1px solid var(--line);
+      color: #47684b;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .summary-copy {
+      margin-top: 16px;
+      color: #415449;
+      font-size: 15px;
+      line-height: 1.9;
+      max-width: 92%;
+    }
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+    .interpretation-copy,
+    .tips-copy {
+      margin: 0;
+      color: #2b3c32;
+      font-size: 15px;
+      line-height: 2;
+    }
+    .score-list {
+      display: grid;
+      gap: 14px;
+    }
+    .score-item {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #ffffff;
+      padding: 15px 16px;
+    }
+    .score-item-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .score-item-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1f2923;
+    }
+    .score-item-value {
+      color: #47694b;
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .score-item-desc {
+      margin: 10px 0 0;
+      color: #4f6556;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    .author-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .author-head h2 {
+      margin-bottom: 0;
+    }
+    .author-toggle {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 14px;
+      background: #eef6ee;
+      color: #47684b;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .author-details {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+    }
+    .author-copy {
+      margin: 0;
+      color: #32433a;
+      font-size: 14px;
+      line-height: 1.9;
+    }
+    .author-meta {
+      margin-top: 10px;
+      color: #66756b;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+    .author-meta strong {
+      color: #3f4f46;
+    }
+    .author-subtitle {
+      margin-top: 14px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #304238;
+    }
+    .author-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: #43554a;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    @media (max-width: 900px) {
+      .page-shell {
+        padding: 16px 10px 40px;
+      }
+      .report-frame {
+        padding: 76px 14px 14px;
+      }
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-poster-wrap {
+        grid-template-columns: 1fr;
+      }
+      .poster-side-note {
+        display: none;
+      }
+      .summary-copy {
+        max-width: 100%;
+      }
+      .score-item-top {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+    """
+
+
+def render_mirror_script() -> str:
+    return """
+    function xmlEscape(value) {
+      return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function exportLongImage() {
+      const button = document.getElementById('exportBtn');
+      const report = document.getElementById('reportCapture');
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.textContent = '导出中...';
+      try {
+        const clone = report.cloneNode(true);
+        clone.querySelectorAll('[data-export-hide]').forEach((node) => node.remove());
+        const styles = Array.from(document.querySelectorAll('style')).map((node) => node.textContent).join('\\n');
+        const width = Math.ceil(report.scrollWidth);
+        const height = Math.ceil(report.scrollHeight);
+        const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <style>${xmlEscape(styles)}</style>
+      ${clone.outerHTML}
+    </div>
+  </foreignObject>
+</svg>`.trim();
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+        });
+        const scale = window.devicePixelRatio > 1 ? 2 : 1.5;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(width * scale);
+        canvas.height = Math.ceil(height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        const png = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        const downloadUrl = URL.createObjectURL(png);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = 'sbti-report.png';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+      } catch (error) {
+        console.error(error);
+        alert('长图导出失败，请使用 Chromium/Edge 重试。');
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
+
+    const exportBtn = document.getElementById('exportBtn');
+    const authorToggle = document.getElementById('authorToggle');
+    const authorDetails = document.getElementById('authorDetails');
+
+    exportBtn.addEventListener('click', exportLongImage);
+    authorToggle.addEventListener('click', () => {
+      const expanded = authorToggle.getAttribute('aria-expanded') === 'true';
+      authorToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      authorToggle.textContent = expanded ? '展开' : '收起';
+      authorDetails.hidden = expanded;
+    });
+    """
+
+
+def render_report_html(payload: dict[str, Any]) -> str:
+    result = payload["result"]
+    target = payload["target"]
+    meta = payload["meta"]
+    low_conf = meta["low_confidence_questions"]
+    dimension_details = payload["dimension_details"]
+
+    dim_cards = "".join(
+        f"""
+        <article class="score-item">
+          <div class="score-item-top">
+            <div class="score-item-name">{esc(item['name'])}</div>
+            <div class="score-item-value">{esc(item['level'])} / {esc(item['score'])}分</div>
+          </div>
+          <p class="score-item-desc">{esc(item['explanation'])}</p>
+        </article>
+        """
+        for item in dimension_details
+    )
+
+    low_conf_html = (
+        "".join(
+            f"<li><strong>{esc(item['id'])}</strong> · {esc(round(item['confidence'] * 100))}% · {esc(item['evidence'])}</li>"
+            for item in low_conf[:8]
+        )
+        if low_conf
+        else "<li>本次代理测评未出现明显低于 55% 的题目置信度。</li>"
+    )
+
+    poster_image_data, poster_image_reason = resolve_official_type_image(result["type"])
+    if poster_image_data:
+        poster_visual_html = (
+            f'<img class="poster-image" src="{poster_image_data}" '
+            f'alt="{esc(result["type"])} 官方人格图" />'
+        )
+    else:
+        poster_visual_html = f'<div class="poster-image-missing">未能载入官方配图：{esc(poster_image_reason)}</div>'
+    interpretation = build_interpretation(payload)
+    payload_blob = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{esc(target['name'])} · SBTI 报告</title>
+  <style>{render_mirror_styles()}</style>
+</head>
+<body>
+  <div class="page-shell">
+    <div class="report-frame" id="reportCapture">
+      <div class="toolbar" data-export-hide>
+        <button class="export-btn" id="exportBtn">导出长图</button>
+      </div>
+      <div class="stack">
+        <section class="hero-grid">
+          <div class="hero-poster-wrap">
+            <div class="hero-poster">
+              <div class="poster-window">
+                <div class="poster-kicker">你的人格类型是：</div>
+                <div class="poster-cn">{esc(result['cn'])}</div>
+                <div class="poster-code">{esc(result['type'])}</div>
+                <div class="poster-scene">{poster_visual_html}</div>
+                <div class="poster-quote">{esc(result['intro'])}</div>
+              </div>
+            </div>
+            <div class="poster-side-note">SBTI 原站结果页</div>
+          </div>
+          <div class="panel summary-card">
+            <div class="summary-kicker">你的主类型</div>
+            <div class="summary-title">{esc(result['type'])}（{esc(result['cn'])}）</div>
+            <div class="summary-badge">{esc(result['badge'])}</div>
+            <p class="summary-copy">{esc(result['sub'])}</p>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>该人格的简单解读</h2>
+          <p class="interpretation-copy">{esc(interpretation)}</p>
+        </section>
+        <section class="panel">
+          <h2>十五维评分</h2>
+          <div class="score-list">{dim_cards}</div>
+        </section>
+        <section class="panel">
+          <h2>友情提示</h2>
+          <p class="tips-copy">本测试仅供娱乐，别拿它当诊断、面试、相亲、分手、招魂、算命或人生决策。你可以笑，但别太当真。</p>
+        </section>
+        <section class="panel">
+          <div class="author-head">
+            <h2>作者的话</h2>
+            <button type="button" class="author-toggle" id="authorToggle" aria-controls="authorDetails" aria-expanded="false">展开</button>
+          </div>
+          <div class="author-details" id="authorDetails" hidden>
+            <p class="author-copy">{esc(interpretation)}{esc(meta['method_note'])}</p>
+            <div class="author-meta">
+              <strong>报告时间：</strong>{esc(meta['generated_at'])}<br />
+              <strong>来源模式：</strong>{esc(target['source_mode'])} / {esc(target['runtime'])}<br />
+              <strong>题目来源：</strong>{esc(meta['question_source'])}<br />
+              <strong>参考文件：</strong>{esc('、'.join(meta['source_files'][:8]))}
+            </div>
+            <div class="author-subtitle">低置信度提醒</div>
+            <ul class="author-list">{low_conf_html}</ul>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <script id="reportData" type="application/json">{payload_blob}</script>
+  <script>{render_mirror_script()}</script>
 </body>
 </html>
 """
