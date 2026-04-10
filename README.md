@@ -109,11 +109,6 @@
 Claude Code 会从项目里的 `.claude/skills/`，或全局的 `~/.claude/skills/` 读取 skill。
 
 ```bash
-# 装到当前项目
-mkdir -p .claude/skills
-git clone https://github.com/SamadhiFire/everyone-s-SBTI.git .claude/skills/everyone-s-sbti
-
-# 或装到全局
 git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.claude/skills/everyone-s-sbti
 ```
 
@@ -127,7 +122,7 @@ git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.codex/skills/eve
 
 ### 其他平台
 
-不是每个平台都叫 skill，但多数 Agent 都支持“自定义提示词 / 自定义技能目录 / 项目规则”。
+直接和你的Agent说！
 
 ```text
 请帮我接入这个 skill：
@@ -136,10 +131,14 @@ https://github.com/SamadhiFire/everyone-s-SBTI
 按 README 安装；如果当前平台不支持 skill，就转成等价的自定义规则。
 ```
 
+> [!TIP]
+> 如果你还想额外生成一张专属 `PNG` 长图，建议在 `Chromium / Edge` 环境下运行，
+> 并保留 `scripts/capture_report_png.mjs`。没有这层环境时，`HTML / JSON` 仍然能正常生成。
+
 ### 调取指令
 
 ```text
-调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告。
+调用 everyone-s-SBTI，给刚蒸馏好的 xxxx 生成一份 SBTI 报告。
 ```
 
 ```text
@@ -197,7 +196,7 @@ python scripts/generate_sbti_report.py --target "<target-dir>"
 
 - 原作者主页：[Q肉儿串儿](https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click)
 - 开源项目：[pingfanfan/SBTI](https://github.com/pingfanfan/SBTI?tab=MIT-1-ov-file)
-- 镜像仓库：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
+- 开源项目：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
 
-如果你喜欢这个项目，也请顺手尊重原作者、尊重原始创意来源、尊重开源边界。  
-可以二创，可以继续适配，也可以继续整活，但别把别人的东西换个壳就当成自己从零写的。
+
+
