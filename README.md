@@ -102,53 +102,11 @@
 
 ## 5. 怎么使用
 
-### Claude Code
-
-Claude Code 一般会从项目里的 `.claude/skills/`，或全局的 `~/.claude/skills/` 读取 skill。
-
-```bash
-# 安装到当前项目
-mkdir -p .claude/skills
-git clone https://github.com/SamadhiFire/everyone-s-SBTI.git .claude/skills/everyone-s-sbti
-
-# 或安装到全局
-git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.claude/skills/everyone-s-sbti
-```
-
-### Codex
-
-如果你在用 Codex，一般放进 `$CODEX_HOME/skills/` 或 `~/.codex/skills/` 就行。
-
-```bash
-git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.codex/skills/everyone-s-sbti
-```
-
-### 其他平台
-
-不是每个平台都叫 skill，但大多数 Agent 都支持“自定义系统提示词 / 自定义技能目录 / 项目级规则”。
-
-最省事的调法是，直接把这句甩给你的 Agent：
-
-```text
-请帮我接入这个 skill：
-https://github.com/SamadhiFire/everyone-s-SBTI
-
-按 README 进行安装；如果当前平台不支持 skill，就转成等价的自定义规则。
-```
-
-### 调取指令
-
-装好以后，直接这样叫它干活就行：
-
-```text
-调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告。
-```
-
-或者更具体一点：
-
-```text
-请用 everyone-s-SBTI 读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，并输出 sbti-report.html 和 sbti-report.json。
-```
+| 场景 | 你可以怎么说 | 它会做什么 |
+| --- | --- | --- |
+| Codex | `调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告` | 自动找目标人物目录，输出 `sbti-report.html` 和 `sbti-report.json` |
+| Claude Code | `请用 everyone-s-SBTI 测一下这个前任的 SBTI，并生成 HTML 报告` | 优先让目标 skill 按协议代答，失败时退回文件推断 |
+| 通用 AI Agent | `读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，按 SBTI 题库做代理测评，并输出单文件 HTML 报告和 JSON 结果` | 适合接在任何人物蒸馏工作流后面，当报告层使用 |
 
 如果你的 Agent 支持直接跑命令，也可以一句话执行：
 
@@ -193,7 +151,7 @@ python scripts/generate_sbti_report.py --target "<target-dir>"
 
 - 原作者主页：[Q肉儿串儿](https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click)
 - 开源项目：[pingfanfan/SBTI](https://github.com/pingfanfan/SBTI?tab=MIT-1-ov-file)
-- 镜像仓库：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
+- 开源项目：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
 
-如果你喜欢这个项目，也请顺手尊重原作者、尊重原始创意来源、尊重开源边界。  
-可以二创，可以继续适配，也可以继续整活，但别把别人的东西换个壳就当成自己从零写的。
+  
+
