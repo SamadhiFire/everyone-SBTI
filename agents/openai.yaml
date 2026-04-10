@@ -1,0 +1,3 @@
+﻿interface:
+  display_name: "everyone's SBTI"
+  short_description: "为当前 persona skill 自动生成 SBTI HTML 报告"
