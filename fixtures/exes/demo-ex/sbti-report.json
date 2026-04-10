@@ -489,7 +489,7 @@
     }
   ],
   "meta": {
-    "generated_at": "2026-04-10T19:50:33+08:00",
+    "generated_at": "2026-04-10T20:08:18+08:00",
     "question_source": "UnluckyNinja/SBTI-test mirrored questionnaire",
     "report_version": "v1",
     "method_note": "这是基于蒸馏 persona skill 的代理测评，不是用户本人手动答题，也不是心理学诊断。",
