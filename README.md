@@ -21,6 +21,7 @@
 ![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-7c3aed)
 ![Single File HTML](https://img.shields.io/badge/Output-Single%20File%20HTML-0f766e)
 ![Official Images](https://img.shields.io/badge/Poster-Official%20Images-2e7d32)
+![License MIT](https://img.shields.io/badge/License-MIT-f5b301)
 
 <br />
 <br />
@@ -61,9 +62,7 @@
   <a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/SamadhiFire/everyone-s-SBTI/main/fixtures/exes/demo-ex/sbti-report.html">
     <img alt="在线查看 SBTI 示例报告" src="https://img.shields.io/badge/在线查看-SBTI%20示例报告-b8842c?style=for-the-badge&logo=html5&logoColor=white" />
   </a>
-  <a href="https://github.com/SamadhiFire/everyone-s-SBTI/tree/main/fixtures/exes/demo-ex">
-    <img alt="查看示例目录" src="https://img.shields.io/badge/GitHub-示例目录-8c2f39?style=for-the-badge&logo=github&logoColor=white" />
-  </a>
+  
 </p>
 
 ## 3. 核心技术
@@ -102,17 +101,59 @@
 
 ## 5. 怎么使用
 
-| 场景 | 你可以怎么说 | 它会做什么 |
-| --- | --- | --- |
-| Codex | `调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告` | 自动找目标人物目录，输出 `sbti-report.html` 和 `sbti-report.json` |
-| Claude Code | `请用 everyone-s-SBTI 测一下这个前任的 SBTI，并生成 HTML 报告` | 优先让目标 skill 按协议代答，失败时退回文件推断 |
-| 通用 AI Agent | `读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，按 SBTI 题库做代理测评，并输出单文件 HTML 报告和 JSON 结果` | 适合接在任何人物蒸馏工作流后面，当报告层使用 |
+### Claude Code
 
-如果你的 Agent 支持直接跑命令，也可以一句话执行：
+Claude Code 会从项目里的 `.claude/skills/`，或全局的 `~/.claude/skills/` 读取 skill。
+
+```bash
+# 装到当前项目
+mkdir -p .claude/skills
+git clone https://github.com/SamadhiFire/everyone-s-SBTI.git .claude/skills/everyone-s-sbti
+
+# 或装到全局
+git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.claude/skills/everyone-s-sbti
+```
+
+### Codex
+
+如果你在用 Codex，一般放进 `$CODEX_HOME/skills/` 或 `~/.codex/skills/` 就行。
+
+```bash
+git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.codex/skills/everyone-s-sbti
+```
+
+### 其他平台
+
+不是每个平台都叫 skill，但多数 Agent 都支持“自定义提示词 / 自定义技能目录 / 项目规则”。
+
+```text
+请帮我接入这个 skill：
+https://github.com/SamadhiFire/everyone-s-SBTI
+
+按 README 安装；如果当前平台不支持 skill，就转成等价的自定义规则。
+```
+
+### 调取指令
+
+```text
+调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告。
+```
+
+```text
+请用 everyone-s-SBTI 读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，并输出 sbti-report.html 和 sbti-report.json。
+```
+
+### 命令行
+
+如果你的 Agent 支持直接跑命令，也可以这样执行：
 
 ```bash
 python scripts/generate_sbti_report.py --target "<target-dir>"
 ```
+
+> [!TIP]
+> Python 侧不用额外装第三方依赖，标准库就能跑。  
+> 如果你还想让仓库在生成报告时顺手产出 `sbti-report.png`，记得保留 `scripts/capture_report_png.mjs`，并准备好 `Node.js + Chromium/Edge`。
 
 生成结果会写回目标人物目录本身：
 
@@ -127,6 +168,7 @@ python scripts/generate_sbti_report.py --target "<target-dir>"
 ├─ README.md
 ├─ scripts/
 │  ├─ generate_sbti_report.py
+│  ├─ capture_report_png.mjs
 │  └─ smoke_test.py
 ├─ assets/
 │  └─ sbti-data.json
@@ -151,7 +193,7 @@ python scripts/generate_sbti_report.py --target "<target-dir>"
 
 - 原作者主页：[Q肉儿串儿](https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click)
 - 开源项目：[pingfanfan/SBTI](https://github.com/pingfanfan/SBTI?tab=MIT-1-ov-file)
-- 开源项目：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
+- 镜像仓库：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
 
-  
-
+如果你喜欢这个项目，也请顺手尊重原作者、尊重原始创意来源、尊重开源边界。  
+可以二创，可以继续适配，也可以继续整活，但别把别人的东西换个壳就当成自己从零写的。

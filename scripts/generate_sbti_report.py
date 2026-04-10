@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -175,12 +175,13 @@ def capture_report_png(html_path: Path) -> Path | None:
     browser = find_screenshot_browser()
     node = shutil.which("node")
     png_path = html_path.with_suffix(".png")
+    if png_path.exists():
+        png_path.unlink()
     if not browser or not node or not PNG_CAPTURE_SCRIPT.exists():
         return None
 
-    with tempfile.TemporaryDirectory(prefix="everyone-s-sbti-", dir=BASE_DIR) as temp_dir:
-        profile_dir = Path(temp_dir) / "browser-profile"
-        profile_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir = Path(tempfile.mkdtemp(prefix="everyone-s-sbti-", dir=str(html_path.parent)))
+    try:
         command = [
             node,
             str(PNG_CAPTURE_SCRIPT),
@@ -195,7 +196,7 @@ def capture_report_png(html_path: Path) -> Path | None:
             "--height",
             str(PNG_CAPTURE_VIEWPORT[1]),
             "--profile-dir",
-            str(profile_dir),
+            str(temp_dir),
         ]
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         completed = subprocess.run(
@@ -206,6 +207,8 @@ def capture_report_png(html_path: Path) -> Path | None:
             errors="ignore",
             creationflags=creationflags,
         )
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
     if completed.returncode == 0 and png_path.exists():
         return png_path
     warning = completed.stderr.strip() or completed.stdout.strip()
@@ -1715,55 +1718,6 @@ def render_mirror_script() -> str:
         button.disabled = false;
         button.textContent = originalLabel;
       }
-      return;
-      button.textContent = '导出中...';
-      try {
-        const clone = report.cloneNode(true);
-        clone.querySelectorAll('[data-export-hide]').forEach((node) => node.remove());
-        const styles = Array.from(document.querySelectorAll('style')).map((node) => node.textContent).join('\\n');
-        const width = Math.ceil(report.scrollWidth);
-        const height = Math.ceil(report.scrollHeight);
-        const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-  <foreignObject width="100%" height="100%">
-    <div xmlns="http://www.w3.org/1999/xhtml">
-      <style>${xmlEscape(styles)}</style>
-      ${clone.outerHTML}
-    </div>
-  </foreignObject>
-</svg>`.trim();
-        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = url;
-        });
-        const scale = window.devicePixelRatio > 1 ? 2 : 1.5;
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.ceil(width * scale);
-        canvas.height = Math.ceil(height * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.scale(scale, scale);
-        ctx.drawImage(img, 0, 0, width, height);
-        URL.revokeObjectURL(url);
-        const png = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-        const downloadUrl = URL.createObjectURL(png);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = 'sbti-report.png';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(downloadUrl);
-      } catch (error) {
-        console.error(error);
-        alert('长图导出失败，请使用 Chromium/Edge 重试。');
-      } finally {
-        button.disabled = false;
-        button.textContent = originalLabel;
-      }
     }
 
     const exportBtn = document.getElementById('exportBtn');
@@ -1774,11 +1728,10 @@ def render_mirror_script() -> str:
     authorToggle.addEventListener('click', () => {
       const expanded = authorToggle.getAttribute('aria-expanded') === 'true';
       authorToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-      authorToggle.textContent = expanded ? '展开' : '收起';
+      authorToggle.textContent = expanded ? '灞曞紑' : '鏀惰捣';
       authorDetails.hidden = expanded;
     });
     """
-
 
 def render_report_html(payload: dict[str, Any]) -> str:
     result = payload["result"]
@@ -1897,12 +1850,13 @@ def render_report_html(payload: dict[str, Any]) -> str:
 """
 
 
-def write_report(target: Path, payload: dict[str, Any]) -> tuple[Path, Path]:
+def write_report(target: Path, payload: dict[str, Any]) -> tuple[Path, Path, Path | None]:
     html_path = target / f"{OUTPUT_STEM}.html"
     json_path = target / f"{OUTPUT_STEM}.json"
     html_path.write_text(render_report_html(payload), encoding="utf-8")
     json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    return html_path, json_path
+    png_path = capture_report_png(html_path)
+    return html_path, json_path, png_path
 
 
 def build_answer_dump(reference: dict[str, Any]) -> dict[str, Any]:
@@ -1940,10 +1894,21 @@ def main() -> int:
     answers = merge_answers(reference, provided_answers, fallback_answers)
     result = compute_result(reference, answers)
     payload = build_payload(target, reference, sources, meta, answers, result, source_mode)
-    html_path, json_path = write_report(target, payload)
-    print(json.dumps({"html": str(html_path), "json": str(json_path), "target": str(target)}, ensure_ascii=False))
+    html_path, json_path, png_path = write_report(target, payload)
+    print(
+        json.dumps(
+            {
+                "html": str(html_path),
+                "json": str(json_path),
+                "png": str(png_path) if png_path else None,
+                "target": str(target),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

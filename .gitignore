@@ -1,6 +1,9 @@
 __pycache__/
 *.pyc
+.tmp-edge-profile*/
+.tmp-shot-profile*/
 **/sbti-report.html
 **/sbti-report.json
+**/sbti-report.png
 !fixtures/exes/demo-ex/sbti-report.html
 !fixtures/exes/demo-ex/sbti-report.json

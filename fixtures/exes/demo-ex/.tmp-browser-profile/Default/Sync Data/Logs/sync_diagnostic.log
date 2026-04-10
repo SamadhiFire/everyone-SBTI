@@ -1,0 +1,6 @@
+2026-04-10 11:40:51.777: [INFO][Sync] Reset engine, reason: 8
+2026-04-10 11:40:51.777: [INFO][Sync] Stopped: Bookmarks
+2026-04-10 11:40:51.777: [INFO][Sync] Stopped: Preferences
+2026-04-10 11:40:51.778: [INFO][Sync] Stopped: Passwords
+2026-04-10 11:40:51.778: [INFO][Sync] Stopped: Autofill Profiles
+2026-04-10 11:40:51.778: [INFO][Sync] Stopped: Autofill
