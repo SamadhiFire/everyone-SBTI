@@ -2,12 +2,16 @@
 
 <br />
 
-# 测所有人SBTI.Skill
+<div style="margin: 40px 0; font-size: 2em; font-weight: bold;">
+测所有人SBTI.Skill
+</div>
 
-闺蜜，**我想测前任、crush、导师到底是哪种 SBTI**
+<div style="line-height: 2; margin: 20px 0;">
+闺蜜，**我想测前任、现任、Crush、导师、老板、同事的SBTI**
 
 大家之前蒸出来人别落灰了！可以再交给 `测所有人SBTI.Skill`。  
 它会直接生成一份能看、能发、还能导出分享的 SBTI 报告。
+</div>
 
 ![Codex Compatible](https://img.shields.io/badge/Codex-Compatible-black)
 ![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-7c3aed)
@@ -32,7 +36,8 @@
 
 `测所有人SBTI.Skill` 是一个下游报告 skill。
 
-它不负责蒸馏人物，也不负责替你采访或让你自己填问卷。  
+不负责蒸馏人物，
+肯定也不负责替你采访或让你自己填问卷。  
 它只做一件事：读取已经蒸馏好的人物目录，复用原版 SBTI 题库，生成 `sbti-report.html` 和 `sbti-report.json`。
 
 > [!IMPORTANT]
@@ -68,6 +73,7 @@
 ## 4. 适配的上游 Skills
 
 你可以先用这些人物蒸馏 skill，把你想蒸馏的人物做出来，再把结果交给本 skill 生成 SBTI 报告。
+在这里表示对各位原作的感谢：
 
 <p align="center">
   <a href="https://github.com/NatalieCao323/crush-skill">crush.skill</a> ·
@@ -77,7 +83,7 @@
   <a href="https://github.com/titanwings/colleague-skill">同事.skill</a> ·
   <a href="https://github.com/ybq22/supervisor">导师.skill</a> ·
   <a href="https://github.com/xiaoheizi8/crush-skills">crush.skill（扩展版）</a> ·
-  <a href="https://github.com/Janlaywss/hu-chenfeng-skill">胡晨峰.skill</a>
+  <a href="https://github.com/Janlaywss/hu-chenfeng-skill">户晨风.skill</a>
 </p>
 
 一句话理解它们的关系：
