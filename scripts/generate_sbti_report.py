@@ -127,6 +127,14 @@ def slugify(value: str) -> str:
     return value or "unknown-target"
 
 
+def display_target_path(target: Path) -> str:
+    resolved = target.resolve()
+    for root in (Path.cwd().resolve(), BASE_DIR):
+        if is_relative_to(resolved, root):
+            return resolved.relative_to(root).as_posix()
+    return resolved.name
+
+
 def is_relative_to(path: Path, other: Path) -> bool:
     try:
         path.relative_to(other)
@@ -637,7 +645,7 @@ def build_payload(
         "target": {
             "name": target_name,
             "slug": target_slug,
-            "path": str(target),
+            "path": display_target_path(target),
             "runtime": detect_runtime(target),
             "source_mode": source_mode,
         },
@@ -1477,11 +1485,132 @@ def render_mirror_script() -> str:
       return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('image-load-failed'));
+        img.src = src;
+      });
+    }
+
+    async function waitForImages(root) {
+      const images = Array.from(root.querySelectorAll('img'));
+      await Promise.all(images.map((img) => {
+        if (img.complete) {
+          if (typeof img.decode === 'function') {
+            return img.decode().catch(() => {});
+          }
+          return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          img.addEventListener('load', resolve, { once: true });
+          img.addEventListener('error', resolve, { once: true });
+        });
+      }));
+    }
+
+    function getExportDimensions(report) {
+      const rect = report.getBoundingClientRect();
+      return {
+        width: Math.max(Math.ceil(rect.width), Math.ceil(report.scrollWidth)),
+        height: Math.max(Math.ceil(report.scrollHeight), Math.ceil(report.offsetHeight)),
+      };
+    }
+
+    function serializeReportForExport(report, width) {
+      const clone = report.cloneNode(true);
+      clone.querySelectorAll('[data-export-hide]').forEach((node) => node.remove());
+      clone.style.width = `${width}px`;
+      clone.style.maxWidth = 'none';
+      clone.style.margin = '0';
+
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      wrapper.style.width = `${width}px`;
+      wrapper.style.margin = '0';
+      wrapper.style.padding = '0';
+
+      const style = document.createElement('style');
+      style.textContent = Array.from(document.querySelectorAll('style'))
+        .map((node) => node.textContent || '')
+        .join('\\n');
+
+      wrapper.appendChild(style);
+      wrapper.appendChild(clone);
+
+      return new XMLSerializer().serializeToString(wrapper);
+    }
+
+    function getExportScale(width, height) {
+      const maxEdge = 16384;
+      const maxArea = 268435456;
+      let scale = window.devicePixelRatio >= 2 ? 2 : 1.5;
+      scale = Math.min(scale, maxEdge / Math.max(width, height));
+      scale = Math.min(scale, Math.sqrt(maxArea / Math.max(width * height, 1)));
+      return Math.max(scale, 1);
+    }
+
+    async function canvasToBlob(canvas) {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) {
+        throw new Error('canvas-to-blob-failed');
+      }
+      return blob;
+    }
+
     async function exportLongImage() {
       const button = document.getElementById('exportBtn');
       const report = document.getElementById('reportCapture');
       const originalLabel = button.textContent;
       button.disabled = true;
+      button.textContent = '\\u5bfc\\u51fa\\u4e2d...';
+      try {
+        await waitForImages(report);
+        const { width, height } = getExportDimensions(report);
+        const serializedReport = serializeReportForExport(report, width);
+        const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <foreignObject x="0" y="0" width="${width}" height="${height}">
+    ${serializedReport}
+  </foreignObject>
+</svg>`.trim();
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        try {
+          const img = await loadImage(url);
+          const scale = getExportScale(width, height);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.ceil(width * scale));
+          canvas.height = Math.max(1, Math.ceil(height * scale));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('canvas-context-unavailable');
+          }
+          ctx.setTransform(scale, 0, 0, scale, 0, 0);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+          const png = await canvasToBlob(canvas);
+          const downloadUrl = URL.createObjectURL(png);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = 'sbti-report.png';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(downloadUrl);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('\\u957f\\u56fe\\u5bfc\\u51fa\\u5931\\u8d25\\uff0c\\u8bf7\\u4f7f\\u7528 Chromium/Edge \\u91cd\\u8bd5\\u3002');
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+      return;
       button.textContent = '导出中...';
       try {
         const clone = report.cloneNode(true);

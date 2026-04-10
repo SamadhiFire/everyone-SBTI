@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 **/sbti-report.html
 **/sbti-report.json
+!fixtures/exes/demo-ex/sbti-report.html
+!fixtures/exes/demo-ex/sbti-report.json

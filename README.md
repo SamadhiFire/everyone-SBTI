@@ -4,10 +4,10 @@
 
 # 测所有人SBTI.Skill
 
-**把已经蒸馏好的人物 skill，自动变成一份能看、能发、能导出长图的 SBTI 报告。**
+闺蜜，**我想测前任、crush、导师到底是哪种 SBTI**
 
-不是问卷网站，不是心理学诊断，也不是单独可玩的成品。  
-它只负责一件事：**读取现成的人物 skill，复用原版题库、原版配图、原版结果页风格，生成 `sbti-report.html` 和 `sbti-report.json`。**
+大家之前蒸出来人别落灰了！可以再交给 `测所有人SBTI.Skill`。  
+它会直接生成一份能看、能发、还能导出分享的 SBTI 报告。
 
 ![Codex Compatible](https://img.shields.io/badge/Codex-Compatible-black)
 ![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-7c3aed)
@@ -15,9 +15,6 @@
 ![Official Images](https://img.shields.io/badge/Poster-Official%20Images-2e7d32)
 
 <br />
-
-不是自己答题，不是自己测自己。  
-它的用途，是把**别人已经蒸馏好的人物目录**拿来做代理测评，产出一份像样的 SBTI 报告。
 
 <p>
   <a href="#1-项目定位">项目定位</a> ·
@@ -33,153 +30,80 @@
 
 ## 1. 项目定位
 
-`测所有人SBTI.Skill` 是一个**配套型 skill**。
+`测所有人SBTI.Skill` 是一个下游报告 skill。
 
-它不负责：
-
-- 蒸馏人物
-- 生成 persona
-- 采访目标
-- 替代问卷站
-
-它负责：
-
-- 接收一个已经蒸馏好的人物 skill 目录
-- 读取其中的 `SKILL.md`、`persona.md`、`memory.md`、`meta.json` 等材料
-- 复用原版 SBTI 题库做代理测评
-- 生成一份单文件、可离线打开、右上角可导出长图的 HTML 报告
+它不负责蒸馏人物，也不负责替你采访或让你自己填问卷。  
+它只做一件事：读取已经蒸馏好的人物目录，复用原版 SBTI 题库，生成 `sbti-report.html` 和 `sbti-report.json`。
 
 > [!IMPORTANT]
-> 这个 skill **必须和别的人物蒸馏 skill 配合使用**。  
-> **单独使用基本没用**，因为它不会凭空创造人物画像，只会消费别人已经蒸馏好的结果。
+> 先用别的人物蒸馏 skill 把人蒸出来，再用这个 skill 给 TA 出一份完整的 SBTI 报告。
 
 ## 2. 亮点
 
-- **原版题库复用**：不是随手写几条人格描述，而是基于原版 SBTI 题目做代理测评。
-- **原版配图复用**：每种人格优先读取官方图片，一一对应，不再用自绘占位图糊弄。
-- **原版结果页风格**：生成结果尽量贴近原站排版，并保留右上角 `导出长图` 按钮。
-- **单文件 HTML**：输出后的报告可以直接离线打开，不依赖外部静态资源。
-- **兼容多种人物目录**：同时兼容 Claude Code 风格和 Codex 风格的人物 skill 目录。
-- **真正落地到目标目录**：不是只输出一段分析，而是会把报告写回目标人物目录。
+- **原版题库代理测评**：不是随手贴几句性格标签。
+- **直接生成报告文件**：输出单文件 `HTML` 和 `JSON` 结果。
+- **尽量还原原站观感**：复用原版风格和官方配图。
+- **支持导出分享**：右上角保留 `导出长图`。
+
+你也可以直接生成一份完整的 SBTI 报告，效果可以点开看：
+
+<p align="center">
+  <a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/SamadhiFire/everyone-s-SBTI/main/fixtures/exes/demo-ex/sbti-report.html">
+    <img alt="在线查看 SBTI 示例报告" src="https://img.shields.io/badge/在线查看-SBTI%20示例报告-b8842c?style=for-the-badge&logo=html5&logoColor=white" />
+  </a>
+  <a href="https://github.com/SamadhiFire/everyone-s-SBTI/tree/main/fixtures/exes/demo-ex">
+    <img alt="查看示例目录" src="https://img.shields.io/badge/GitHub-示例目录-8c2f39?style=for-the-badge&logo=github&logoColor=white" />
+  </a>
+</p>
 
 ## 3. 核心技术
 
-这里不讲复杂词，直接说它现在靠什么工作：
-
-### 3.1 自动找目标人物目录
-
-脚本会优先寻找像人物 skill 的目录，并重点识别这些文件：
-
-- `SKILL.md`
-- `persona.md`
-- `memory.md`
-- `meta.json`
-
-如果目录结构比较特殊，也可以直接用 `--target` 显式指定。
-
-### 3.2 两种测评模式
-
-- `conversation-first`：能直接和目标 skill 对话时，就让它按结构化协议代答。
-- `file-fallback`：不能稳定对话时，就读取目录里的 Markdown / TXT / JSON 材料做推断。
-
-### 3.3 官方图片映射
-
-本仓库会读取本地 `SBTI-test-main/index.html` 中的 `TYPE_IMAGES` 映射，把官方图片直接嵌进生成结果。
-
-也就是说：
-
-- `MUM` 对应 `MUM.png`
-- `DEAD` 对应 `DEAD.png`
-- `OJBK` 对应 `OJBK.png`
-- `WOC!` 对应 `WOC.png`
-
-如果没有对应图片，脚本会明确说明原因，不会偷偷生成一张假的替代图。
-
-### 3.4 单文件报告输出
-
-最终输出：
-
-- `sbti-report.html`
-- `sbti-report.json`
-
-其中 HTML 报告默认包含：
-
-- 官方人格图
-- 简单解读
-- 十五维评分
-- 友情提示
-- 作者的话
-- 导出长图按钮
+| 模块 | 怎么做 | 带来的结果 |
+| --- | --- | --- |
+| 目标识别 | 自动识别 `SKILL.md` / `persona.md` / `memory.md` / `meta.json` | 少手动传参，直接锁定人物目录 |
+| 代理测评 | 优先 `conversation-first`，失败时走 `file-fallback` | 能对话就对话，不能对话也能兜底生成 |
+| 原版资源复用 | 读取原版题库、类型映射和官方图片 | 结果更贴近原站，不像临时拼装页 |
+| 单文件输出 | 内嵌样式和图片，直接写回目标目录 | 双击可开，右上角可导出长图 |
 
 ## 4. 适配的上游 Skills
 
-这个 skill 目前是为了和下面这些“人物蒸馏 skill / 人物生成 skill”配合使用的。
+你可以先用这些人物蒸馏 skill，把你想蒸馏的人物做出来，再把结果交给本 skill 生成 SBTI 报告。
+
+<p align="center">
+  <a href="https://github.com/NatalieCao323/crush-skill">crush.skill</a> ·
+  <a href="https://github.com/therealXiaomanChu/ex-skill">前任.skill</a> ·
+  <a href="https://github.com/jiangziyan-693/MamaSkill">妈妈.skill</a> ·
+  <a href="https://github.com/notdog1998/yourself-skill">自己.skill</a> ·
+  <a href="https://github.com/titanwings/colleague-skill">同事.skill</a> ·
+  <a href="https://github.com/ybq22/supervisor">导师.skill</a> ·
+  <a href="https://github.com/xiaoheizi8/crush-skills">crush.skill（扩展版）</a> ·
+  <a href="https://github.com/Janlaywss/hu-chenfeng-skill">胡晨峰.skill</a>
+</p>
+
+一句话理解它们的关系：
+
+- 上游人物 skill 负责**把人蒸出来**
+- `测所有人SBTI.Skill` 负责**把这个人写成一份 SBTI 报告**
 
 > [!NOTE]
-> 这里说的“适配”，指的是**适配这些 skill 生成出来的人物目录**。  
-> 不是说把这些仓库根目录单独丢进来就一定能直接跑。
-
-已适配的上游 skills：
-
-- [NatalieCao323/crush-skill](https://github.com/NatalieCao323/crush-skill)
-- [therealXiaomanChu/ex-skill](https://github.com/therealXiaomanChu/ex-skill)
-- [jiangziyan-693/MamaSkill](https://github.com/jiangziyan-693/MamaSkill)
-- [notdog1998/yourself-skill](https://github.com/notdog1998/yourself-skill)
-- [titanwings/colleague-skill](https://github.com/titanwings/colleague-skill)
-- [ybq22/supervisor](https://github.com/ybq22/supervisor)
-- [xiaoheizi8/crush-skills](https://github.com/xiaoheizi8/crush-skills)
-- [Janlaywss/hu-chenfeng-skill](https://github.com/Janlaywss/hu-chenfeng-skill)
-
-这些上游 skill 和本 skill 的关系很简单：
-
-- 上游 skill 负责**蒸馏人物**
-- 本 skill 负责**给蒸馏结果生成 SBTI 报告**
-
-一句话总结：
-
-**它是“人物 skill 的报告层”，不是人物 skill 本体。**
+> 这里说的“适配”，是适配这些 skill 产出的人物目录。  
+> 不是把仓库链接直接丢给它，它就能凭空开始测。
 
 ## 5. 怎么使用
 
-### 5.1 使用前提
+| 场景 | 你可以怎么说 | 它会做什么 |
+| --- | --- | --- |
+| Codex | `调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告` | 自动找目标人物目录，输出 `sbti-report.html` 和 `sbti-report.json` |
+| Claude Code | `请用 everyone-s-SBTI 测一下这个前任的 SBTI，并生成 HTML 报告` | 优先让目标 skill 按协议代答，失败时退回文件推断 |
+| 通用 AI Agent | `读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，按 SBTI 题库做代理测评，并输出单文件 HTML 报告和 JSON 结果` | 适合接在任何人物蒸馏工作流后面，当报告层使用 |
 
-你需要先有一个已经蒸馏好的人物目录，里面最好至少包含以下文件中的若干个：
-
-- `SKILL.md`
-- `persona.md`
-- `memory.md`
-- `meta.json`
-
-### 5.2 在对话里触发
-
-可以直接说：
-
-- `调用 everyone-s-SBTI`
-- `测一测他的 sbti 是什么`
-- `给这个人做 sbti 报告`
-- `生成 sbti html`
-
-### 5.3 用脚本直接生成
+如果你的 Agent 支持直接跑命令，也可以一句话执行：
 
 ```bash
 python scripts/generate_sbti_report.py --target "<target-dir>"
 ```
 
-如果你已经准备好了结构化答案文件：
-
-```bash
-python scripts/generate_sbti_report.py --target "<target-dir>" --answers-file "<answers.json>"
-```
-
-导出问卷结构：
-
-```bash
-python scripts/generate_sbti_report.py --dump-questions
-```
-
-### 5.4 输出位置
-
-报告会写进**目标人物目录本身**：
+生成结果会写回目标人物目录本身：
 
 - `<target-dir>/sbti-report.html`
 - `<target-dir>/sbti-report.json`
@@ -202,24 +126,21 @@ python scripts/generate_sbti_report.py --dump-questions
 │  └─ image/
 └─ fixtures/
    └─ exes/demo-ex/
+      ├─ SKILL.md
+      ├─ persona.md
+      ├─ memory.md
+      ├─ meta.json
+      ├─ sbti-report.html
+      └─ sbti-report.json
 ```
-
-### 6.1 关键目录说明
-
-- `scripts/`：主生成逻辑和测试脚本
-- `assets/`：题库、类型库、十五维说明
-- `references/`：conversation-first 的答题协议
-- `SBTI-test-main/`：原版镜像资源，包括官方图片映射
-- `fixtures/`：本地 demo 和示例输出
 
 ## 7. 致谢
 
-感谢原始创意、镜像与开源工作，让这个配套 skill 有机会站在前人的肩膀上认真胡闹：
+感谢原始创意、镜像与开源项目，让这个 skill 能站在前人的肩膀上认真胡闹：
 
-- 原作者主页：<https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click>
-- `pingfanfan/SBTI`：<https://github.com/pingfanfan/SBTI?tab=MIT-1-ov-file>
-- `UnluckyNinja/SBTI-test`：<https://github.com/UnluckyNinja/SBTI-test>
+- 原作者主页：[Q肉儿串儿](https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click)
+- 开源项目：[pingfanfan/SBTI](https://github.com/pingfanfan/SBTI?tab=MIT-1-ov-file)
+- 镜像仓库：[UnluckyNinja/SBTI-test](https://github.com/UnluckyNinja/SBTI-test)
 
-如果你喜欢这个项目，也请优先尊重原作者、尊重原始创意来源、尊重开源边界。  
-可以二创，可以适配，可以继续折腾，但别把别人的东西换个壳就装成自己从零开始。
-
+如果你喜欢这个项目，也请顺手尊重原作者、尊重原始创意来源、尊重开源边界。  
+可以二创，可以继续适配，也可以继续整活，但别把别人的东西换个壳就当成自己从零写的。
