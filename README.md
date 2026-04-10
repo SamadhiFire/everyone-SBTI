@@ -7,11 +7,14 @@
 <h1>测所有人SBTI.Skill</h1>
 
 <p>
-  <strong>闺蜜，我想测前任、现任、Crush、导师、老板、同事的 SBTI。</strong>
+  闺蜜，我想测<strong>前任、现任、Crush、导师、老板、同事的 SBTI。<strong>
 </p>
 
 <p>
-  大家之前蒸出来的人别落灰了，统统可以再交给 <code>测所有人SBTI.Skill</code>。<br />
+  大家之前蒸出来的人别落灰了
+  
+  统统可以再交给<strong>测所有人SBTI.Skill<strong>。<br />
+  
   它会直接生成一份<strong>能看、能发、还能导出分享</strong>的 SBTI 报告。
 </p>
 
