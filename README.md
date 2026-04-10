@@ -2,20 +2,20 @@
 
 <br />
 <br />
+<br />
 
-<div style="margin: 64px 0 28px; font-size: 2.6em; font-weight: 800; letter-spacing: 0.02em;">
-测所有人SBTI.Skill
-</div>
+<h1>测所有人SBTI.Skill</h1>
 
-<div style="max-width: 860px; margin: 34px auto 30px; line-height: 2.15; font-size: 1.14em;">
-  <p style="margin: 0 0 18px; font-size: 1.2em; font-weight: 800;">
-    闺蜜，我想测前任、现任、Crush、导师、老板、同事的 SBTI。
-  </p>
-  <p style="margin: 0; font-weight: 600;">
-    大家之前蒸出来的人别落灰了，统统可以再交给 <code>测所有人SBTI.Skill</code>。<br />
-    它会直接生成一份<strong>能看、能发、还能导出分享</strong>的 SBTI 报告。
-  </p>
-</div>
+<p>
+  <strong>闺蜜，我想测前任、现任、Crush、导师、老板、同事的 SBTI。</strong>
+</p>
+
+<p>
+  大家之前蒸出来的人别落灰了，统统可以再交给 <code>测所有人SBTI.Skill</code>。<br />
+  它会直接生成一份<strong>能看、能发、还能导出分享</strong>的 SBTI 报告。
+</p>
+
+<br />
 
 ![Codex Compatible](https://img.shields.io/badge/Codex-Compatible-black)
 ![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-7c3aed)
