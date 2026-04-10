@@ -1420,33 +1420,29 @@ def render_mirror_styles() -> str:
       padding-top: 14px;
       border-top: 1px dashed var(--line);
     }
+    .author-section + .author-section {
+      margin-top: 16px;
+    }
     .author-copy {
-      margin: 0;
+      margin: 10px 0 0;
       color: #32433a;
       font-size: 14px;
       line-height: 1.9;
     }
-    .author-meta {
-      margin-top: 10px;
-      color: #66756b;
-      font-size: 12px;
-      line-height: 1.8;
-    }
-    .author-meta strong {
-      color: #3f4f46;
-    }
     .author-subtitle {
-      margin-top: 14px;
+      margin-top: 0;
       font-size: 13px;
       font-weight: 800;
       color: #304238;
     }
-    .author-list {
-      margin: 8px 0 0;
-      padding-left: 18px;
-      color: #43554a;
-      font-size: 13px;
-      line-height: 1.8;
+    .author-link {
+      color: #47684b;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(71, 104, 75, 0.25);
+    }
+    .author-link:hover {
+      color: #2f4b34;
+      border-bottom-color: rgba(47, 75, 52, 0.5);
     }
     @media (max-width: 900px) {
       .page-shell {
@@ -1554,7 +1550,6 @@ def render_report_html(payload: dict[str, Any]) -> str:
     result = payload["result"]
     target = payload["target"]
     meta = payload["meta"]
-    low_conf = meta["low_confidence_questions"]
     dimension_details = payload["dimension_details"]
 
     dim_cards = "".join(
@@ -1570,15 +1565,6 @@ def render_report_html(payload: dict[str, Any]) -> str:
         for item in dimension_details
     )
 
-    low_conf_html = (
-        "".join(
-            f"<li><strong>{esc(item['id'])}</strong> · {esc(round(item['confidence'] * 100))}% · {esc(item['evidence'])}</li>"
-            for item in low_conf[:8]
-        )
-        if low_conf
-        else "<li>本次代理测评未出现明显低于 55% 的题目置信度。</li>"
-    )
-
     poster_image_data, poster_image_reason = resolve_official_type_image(result["type"])
     if poster_image_data:
         poster_visual_html = (
@@ -1588,6 +1574,19 @@ def render_report_html(payload: dict[str, Any]) -> str:
     else:
         poster_visual_html = f'<div class="poster-image-missing">未能载入官方配图：{esc(poster_image_reason)}</div>'
     interpretation = build_interpretation(payload)
+    original_author_paragraphs = [
+        "本测试首发于b站up主Q肉儿串儿（UID417038183），初衷是劝诫一位爱喝酒的朋友戒酒。",
+        "由于作者的人格是SHIT愤世者，所以平等的攻击了各位，在此抱歉！！不过我是一个绝世大美女，你们一定会原谅我，有B站的朋友们也可以关注我。",
+        "关于这个测试，这里是在b站制作的官方初版，为了合规做了些许改动，没有很好的平衡娱乐和专业性，up主不是心理学专业，对于一些人格的阐释较为模糊或完全不准，如有冒犯非常抱歉！！",
+        "再鉴于时间精力有限，就随便搞了一个先这样玩玩，后续会慢慢完善修改的，总之好玩为主，还请不要用于盈利呀（若看见贩卖的麻烦点点举报呜呜！）",
+        "本测试含有人工智能合成技术，15维度的L/M/H为低/中/高，其实更多是为了做匹配用的（）",
+    ]
+    original_author_html = "".join(f'<p class="author-copy">{esc(item)}</p>' for item in original_author_paragraphs)
+    remix_author_paragraphs = [
+        "这个版本属于送钱者 ATM-er 一时手痒搞出来的胡闹二创，开源归开源，礼数还是得有，原作的图、梗、骨架和气质都该先给原作者磕一个电子响头。",
+        "所以这里特别说明：现在这个页面只是基于开源版本做适配和折腾，不代表官方，也不该拿原作的东西换个壳就装成自己的丰功伟绩。真要夸，先夸原作者；真要骂，也欢迎优先骂 ATM-er，别把原创一起连坐了。",
+    ]
+    remix_author_html = "".join(f'<p class="author-copy">{esc(item)}</p>' for item in remix_author_paragraphs)
     payload_blob = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
     return f"""<!DOCTYPE html>
@@ -1643,15 +1642,15 @@ def render_report_html(payload: dict[str, Any]) -> str:
             <button type="button" class="author-toggle" id="authorToggle" aria-controls="authorDetails" aria-expanded="false">展开</button>
           </div>
           <div class="author-details" id="authorDetails" hidden>
-            <p class="author-copy">{esc(interpretation)}{esc(meta['method_note'])}</p>
-            <div class="author-meta">
-              <strong>报告时间：</strong>{esc(meta['generated_at'])}<br />
-              <strong>来源模式：</strong>{esc(target['source_mode'])} / {esc(target['runtime'])}<br />
-              <strong>题目来源：</strong>{esc(meta['question_source'])}<br />
-              <strong>参考文件：</strong>{esc('、'.join(meta['source_files'][:8]))}
+            <div class="author-section">
+              <div class="author-subtitle">原作者的话：</div>
+              {original_author_html}
             </div>
-            <div class="author-subtitle">低置信度提醒</div>
-            <ul class="author-list">{low_conf_html}</ul>
+            <div class="author-section">
+              <div class="author-subtitle">送钱者 ATM-er基于开源版本的胡闹：</div>
+              {remix_author_html}
+              <p class="author-copy">原作者主页：<a class="author-link" href="https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click" target="_blank" rel="noreferrer">https://space.bilibili.com/417038183/dynamic?spm_id_from=333.1368.list.card_avatar.click</a></p>
+            </div>
           </div>
         </section>
       </div>
