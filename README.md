@@ -159,6 +159,7 @@ python scripts/generate_sbti_report.py --target "<target-dir>"
 
 - `<target-dir>/sbti-report.html`
 - `<target-dir>/sbti-report.json`
+- `<target-dir>/sbti-report.png`（可选，但如果你要把成品发到 GitHub 给别人直接双击用，强烈建议一起提交）
 
 ## 6. 仓库结构
 
