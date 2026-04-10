@@ -1,16 +1,20 @@
 <div align="center">
 
 <br />
+<br />
 
-<div style="margin: 40px 0; font-size: 2em; font-weight: bold;">
+<div style="margin: 64px 0 28px; font-size: 2.6em; font-weight: 800; letter-spacing: 0.02em;">
 测所有人SBTI.Skill
 </div>
 
-<div style="line-height: 2; margin: 20px 0;">
-闺蜜，**我想测前任、现任、Crush、导师、老板、同事的SBTI**
-
-大家之前蒸出来人别落灰了！可以再交给 `测所有人SBTI.Skill`。  
-它会直接生成一份能看、能发、还能导出分享的 SBTI 报告。
+<div style="max-width: 860px; margin: 34px auto 30px; line-height: 2.15; font-size: 1.14em;">
+  <p style="margin: 0 0 18px; font-size: 1.2em; font-weight: 800;">
+    闺蜜，我想测前任、现任、Crush、导师、老板、同事的 SBTI。
+  </p>
+  <p style="margin: 0; font-weight: 600;">
+    大家之前蒸出来的人别落灰了，统统可以再交给 <code>测所有人SBTI.Skill</code>。<br />
+    它会直接生成一份<strong>能看、能发、还能导出分享</strong>的 SBTI 报告。
+  </p>
 </div>
 
 ![Codex Compatible](https://img.shields.io/badge/Codex-Compatible-black)
@@ -18,6 +22,7 @@
 ![Single File HTML](https://img.shields.io/badge/Output-Single%20File%20HTML-0f766e)
 ![Official Images](https://img.shields.io/badge/Poster-Official%20Images-2e7d32)
 
+<br />
 <br />
 
 <p>
@@ -97,11 +102,53 @@
 
 ## 5. 怎么使用
 
-| 场景 | 你可以怎么说 | 它会做什么 |
-| --- | --- | --- |
-| Codex | `调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告` | 自动找目标人物目录，输出 `sbti-report.html` 和 `sbti-report.json` |
-| Claude Code | `请用 everyone-s-SBTI 测一下这个前任的 SBTI，并生成 HTML 报告` | 优先让目标 skill 按协议代答，失败时退回文件推断 |
-| 通用 AI Agent | `读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，按 SBTI 题库做代理测评，并输出单文件 HTML 报告和 JSON 结果` | 适合接在任何人物蒸馏工作流后面，当报告层使用 |
+### Claude Code
+
+Claude Code 一般会从项目里的 `.claude/skills/`，或全局的 `~/.claude/skills/` 读取 skill。
+
+```bash
+# 安装到当前项目
+mkdir -p .claude/skills
+git clone https://github.com/SamadhiFire/everyone-s-SBTI.git .claude/skills/everyone-s-sbti
+
+# 或安装到全局
+git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.claude/skills/everyone-s-sbti
+```
+
+### Codex
+
+如果你在用 Codex，一般放进 `$CODEX_HOME/skills/` 或 `~/.codex/skills/` 就行。
+
+```bash
+git clone https://github.com/SamadhiFire/everyone-s-SBTI.git ~/.codex/skills/everyone-s-sbti
+```
+
+### 其他平台
+
+不是每个平台都叫 skill，但大多数 Agent 都支持“自定义系统提示词 / 自定义技能目录 / 项目级规则”。
+
+最省事的调法是，直接把这句甩给你的 Agent：
+
+```text
+请帮我接入这个 skill：
+https://github.com/SamadhiFire/everyone-s-SBTI
+
+按 README 进行安装；如果当前平台不支持 skill，就转成等价的自定义规则。
+```
+
+### 调取指令
+
+装好以后，直接这样叫它干活就行：
+
+```text
+调用 everyone-s-SBTI，给刚蒸馏好的 crush 生成一份 SBTI 报告。
+```
+
+或者更具体一点：
+
+```text
+请用 everyone-s-SBTI 读取这个人物目录里的 SKILL.md、persona.md、memory.md、meta.json，并输出 sbti-report.html 和 sbti-report.json。
+```
 
 如果你的 Agent 支持直接跑命令，也可以一句话执行：
 

@@ -7,7 +7,12 @@ import datetime as dt
 import html
 import json
 import mimetypes
+import os
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +22,8 @@ DATA_PATH = BASE_DIR / "assets" / "sbti-data.json"
 ORIGINAL_MIRROR_DIR = BASE_DIR / "SBTI-test-main"
 ORIGINAL_INDEX_PATH = ORIGINAL_MIRROR_DIR / "index.html"
 OUTPUT_STEM = "sbti-report"
+PNG_CAPTURE_SCRIPT = BASE_DIR / "scripts" / "capture_report_png.mjs"
+PNG_CAPTURE_VIEWPORT = (1440, 960)
 IGNORED_AUTO_DIRS = {
     ".git",
     ".github",
@@ -133,6 +140,78 @@ def display_target_path(target: Path) -> str:
         if is_relative_to(resolved, root):
             return resolved.relative_to(root).as_posix()
     return resolved.name
+
+
+def find_screenshot_browser() -> str | None:
+    env_browser = os.environ.get("EVERYONE_SBTI_BROWSER")
+    if env_browser:
+        return env_browser
+
+    for name in (
+        "msedge",
+        "chrome",
+        "google-chrome",
+        "google-chrome-stable",
+        "chromium",
+        "chromium-browser",
+    ):
+        path = shutil.which(name)
+        if path:
+            return path
+
+    windows_candidates = [
+        Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+        Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
+        Path("C:/Program Files/Google/Chrome/Application/chrome.exe"),
+        Path("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"),
+    ]
+    for candidate in windows_candidates:
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+def capture_report_png(html_path: Path) -> Path | None:
+    browser = find_screenshot_browser()
+    node = shutil.which("node")
+    png_path = html_path.with_suffix(".png")
+    if not browser or not node or not PNG_CAPTURE_SCRIPT.exists():
+        return None
+
+    with tempfile.TemporaryDirectory(prefix="everyone-s-sbti-", dir=BASE_DIR) as temp_dir:
+        profile_dir = Path(temp_dir) / "browser-profile"
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        command = [
+            node,
+            str(PNG_CAPTURE_SCRIPT),
+            "--input",
+            str(html_path.resolve()),
+            "--output",
+            str(png_path.resolve()),
+            "--browser",
+            browser,
+            "--width",
+            str(PNG_CAPTURE_VIEWPORT[0]),
+            "--height",
+            str(PNG_CAPTURE_VIEWPORT[1]),
+            "--profile-dir",
+            str(profile_dir),
+        ]
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            creationflags=creationflags,
+        )
+    if completed.returncode == 0 and png_path.exists():
+        return png_path
+    warning = completed.stderr.strip() or completed.stdout.strip()
+    if warning:
+        print(f"[warn] png capture skipped: {warning}", file=sys.stderr)
+    return None
 
 
 def is_relative_to(path: Path, other: Path) -> bool:
@@ -1559,6 +1638,34 @@ def render_mirror_script() -> str:
       return blob;
     }
 
+    function triggerDownload(href, filename) {
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function getPreRenderedImageUrl() {
+      const url = new URL(window.location.href);
+      url.hash = '';
+      url.search = '';
+      url.pathname = url.pathname.replace(/\\.html?$/i, '.png');
+      return url;
+    }
+
+    async function tryDownloadPreRenderedImage() {
+      const imageUrl = getPreRenderedImageUrl();
+      try {
+        await loadImage(imageUrl.href);
+        triggerDownload(imageUrl.href, 'sbti-report.png');
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
     async function exportLongImage() {
       const button = document.getElementById('exportBtn');
       const report = document.getElementById('reportCapture');
@@ -1566,6 +1673,9 @@ def render_mirror_script() -> str:
       button.disabled = true;
       button.textContent = '\\u5bfc\\u51fa\\u4e2d...';
       try {
+        if (await tryDownloadPreRenderedImage()) {
+          return;
+        }
         await waitForImages(report);
         const { width, height } = getExportDimensions(report);
         const serializedReport = serializeReportForExport(report, width);
@@ -1593,19 +1703,14 @@ def render_mirror_script() -> str:
           ctx.drawImage(img, 0, 0, width, height);
           const png = await canvasToBlob(canvas);
           const downloadUrl = URL.createObjectURL(png);
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = 'sbti-report.png';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
+          triggerDownload(downloadUrl, 'sbti-report.png');
           URL.revokeObjectURL(downloadUrl);
         } finally {
           URL.revokeObjectURL(url);
         }
       } catch (error) {
         console.error(error);
-        alert('\\u957f\\u56fe\\u5bfc\\u51fa\\u5931\\u8d25\\uff0c\\u8bf7\\u4f7f\\u7528 Chromium/Edge \\u91cd\\u8bd5\\u3002');
+        alert('\\u957f\\u56fe\\u5bfc\\u51fa\\u5931\\u8d25\\uff0c\\u8bf7\\u91cd\\u65b0\\u751f\\u6210\\u9644\\u5e26 PNG \\u7684\\u62a5\\u544a\\uff0c\\u6216\\u4f7f\\u7528 Chromium/Edge \\u91cd\\u8bd5\\u3002');
       } finally {
         button.disabled = false;
         button.textContent = originalLabel;
